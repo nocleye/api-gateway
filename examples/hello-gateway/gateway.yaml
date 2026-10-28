@@ -1,5 +1,13 @@
 ApiVersion: v1Beta
 
+Rules:
+  MetricsRules:
+    metrics-on:
+      Enabled: true
+
+GlobalConfig:
+  MetricsRule: metrics-on
+
 ServerConfigs:
   hello-app:
     URL: "http://app:8000"
