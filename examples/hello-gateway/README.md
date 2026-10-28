@@ -81,6 +81,15 @@ It's time for the gateway configuration! For our example, we will need one serve
 ```yaml
 ApiVersion: v1Beta
 
+Rules:
+  MetricsRules:
+    # this controls the access log behavior    
+    metrics-on:
+      Enabled: true
+
+GlobalConfig:
+  MetricsRule: metrics-on
+
 ServerConfigs:
   hello-app:
     URL: "http://app:8000"
