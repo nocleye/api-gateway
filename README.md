@@ -4,8 +4,6 @@
 
 # Nocleye
 
-----
-
 - Site: [Nocleye](https://nocleye.com) 
 - Docs: [Docs](https://nocleye.com/docs)
 
