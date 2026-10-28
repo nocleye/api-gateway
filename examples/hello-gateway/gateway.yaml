@@ -1,0 +1,19 @@
+ApiVersion: v1Beta
+
+ServerConfigs:
+  hello-app:
+    URL: "http://app:8000"
+
+ServerRoutes:
+  # /echo/hello     -> /echo/hello (forwarded unchanged)
+  echo:
+    TargetServer: hello-app
+    PathPattern: /echo
+
+  # /echo/v2/items  -> /echo/latest/items
+  # It also matches the route above, the longer PathPattern wins.
+  echo-v2:
+    TargetServer: hello-app
+    PathPattern: /echo/v2
+    RemovePathPatternFromFinalRoute: true
+    AddPrefixToFinalRoute: /echo/latest
