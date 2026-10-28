@@ -1,0 +1,34 @@
+NOCLEYE API GATEWAY - LICENSE (BETA)
+
+Copyright (c) 2026 Jhonatan Teodoro. All rights reserved.
+
+1. What you can do
+   You may install and run this software, free of charge, for any purpose,
+   including in a business.
+
+2. What you cannot do
+   You may not modify it, reverse engineer it (except where the law allows it
+   despite this clause), sell or sublicense it, or offer it to third parties as
+   a hosted or managed service. You may not remove the copyright, license or
+   attribution notices.
+
+3. Ownership
+   You get a right to use the software, not ownership of it. All other rights
+   stay with the copyright holder.
+
+4. Third-party software
+   This software includes open source components under their own licenses,
+   listed in THIRD_PARTY_NOTICES.md with their texts in third_party_licenses/.
+   Those licenses apply to those components, and nothing here limits your
+   rights under them.
+
+5. No warranty
+   This is beta software, provided "as is", without warranty of any kind. To
+   the extent the law allows, the copyright holder is not liable for any damage
+   arising from its use.
+
+6. Governing law
+   This license is governed by French law.
+
+This license may be replaced by a different one in later versions of the
+software. A version you already received stays under the license it came with.
