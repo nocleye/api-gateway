@@ -41,7 +41,7 @@ Coming soon:
 
 ## Get it
 
-Latest: **v0.1.0-beta** (2026-10-26)
+Latest: **v0.2.0-beta** (2026-10-29)
 
 | | |
 |---|---|
