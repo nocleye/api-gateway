@@ -1,16 +1,17 @@
 # Hello gateway: one backend, two routes
 
 
-### *Gateway Version used in this Tutorial v0.1.0-beta*
+### *Gateway Version used in this Tutorial v0.4.0-beta*
 
 This is a small tutorial for showing the basics of how to use the api gateway
 
 You will see:
 
 - a server and two routes, and how the longest matching path wins,
-- a path rewrite with `RemovePathPatternFromFinalRoute` and `AddPrefixToFinalRoute`,
+- a path rewrite with `RemovePathPattern` and `AddPathPrefix`,
 - the `404` the gateway returns when no route matches,
 - the headers the gateway adds before the request reaches your backend,
+- the gateway log and the access log, to see what the gateway did with each request.
 
 
 ## Required tools
@@ -81,15 +82,6 @@ It's time for the gateway configuration! For our example, we will need one serve
 ```yaml
 ApiVersion: v1Beta
 
-Rules:
-  MetricsRules:
-    # this controls the access log behavior    
-    metrics-on:
-      Enabled: true
-
-GlobalConfig:
-  MetricsRule: metrics-on
-
 ServerConfigs:
   hello-app:
     URL: "http://app:8000"
@@ -97,24 +89,27 @@ ServerConfigs:
 ServerRoutes:
   echo:
     TargetServer: hello-app # this refers to the name you registered on <ServerConfigs> 
-    PathPattern: /echo # this is how we want the server to be selected as destination when the request comes
+    MatchOptions:
+      PathPattern: /echo # this is how we want the server to be selected as destination when the request comes
 
   echo-v2:
     TargetServer: hello-app
-    PathPattern: /echo/v2
-    # this controls the removal of the PathPattern you chose match, if yes when routing we will remove the prefix
-    # e.g full path as /echo/v2/items -> the backend will receive only /items
-    RemovePathPatternFromFinalRoute: true
-    
-    # This allow you to add a prefix path to the final route, works similar as previous example but adding
-    # e.g full path as /items -> the backend will receive /echo/latest/items
-    AddPrefixToFinalRoute: /echo/latest
+    MatchOptions:
+      PathPattern: /echo/v2
+    BeforeForwarding:
+      # this controls the removal of the PathPattern you chose match, if yes when routing we will remove the prefix
+      # e.g full path as /echo/v2/items -> the backend will receive only /items
+      RemovePathPattern: true
+
+      # This allow you to add a prefix path to the final route, works similar as previous example but adding
+      # e.g full path as /items -> the backend will receive /echo/latest/items
+      AddPathPrefix: /echo/latest
 ```
 
 - A **server** is a backend the gateway can forward to. `hello-app` points to the `app` service of the compose file, which you will write in step 5.
 - A **route** maps a public path to one server. A request matches a route when its path starts with `PathPattern`. When several routes match, the longest `PathPattern` wins.
 
-Since there's no header, client ID or usage control rules here, so every header is forwarded and callers are identified by IP. See [servers and routes](https://nocleye.com/docs/servers-and-routes/) for the full reference.
+Since there's no header, client ID or usage control rules here, every header is forwarded and callers are not identified, which only matters once you add usage control. The access log needs no config: every request is logged by default. See [servers and routes](https://nocleye.com/docs/servers-and-routes/) for the full reference.
 
 ## 4. Check the config
 
@@ -123,7 +118,7 @@ Validate the file before you run anything. `nocleye check` reads the config and 
 ```sh
 docker run \
   -v "$PWD/gateway.yaml:/etc/nocleye-beta/gateway/gateway.yaml:ro" \
-  nocleye/api-gateway:v0.1.0-beta check --gConfigPath gateway.yaml
+  nocleye/api-gateway:v0.4.0-beta check --gConfigPath gateway.yaml
 ```
 
 The config file is always read from `/etc/nocleye-beta/gateway/` inside the container, which is why the file is mounted there and `--gConfigPath` is only its name.
@@ -137,7 +132,7 @@ WARNINGS (4)
   1. No auth method defined
      Fix:   Every route is publicly accessible. Add an entry under AuthMethods if you need protection.
   2. No client id rules defined
-     Fix:   Clients will be identified by IP. Add a rule under Rules > ClientIDRules to use something else.
+     Fix:   Callers of routes without an auth method are not identified, so usage control can't limit them. Add a rule under Rules > ClientIDRules and bind it with ClientIDRule.
   3. No header rules defined
      Fix:   All headers from the user's request are forwarded. Add a rule under Rules > HeaderRules to restrict them.
   4. No usage control rules defined
@@ -180,7 +175,7 @@ Let's put everything together now (I hope you have changed back the routes to th
 ```yaml
 services:
   gateway:
-    image: nocleye/api-gateway:v0.1.0-beta
+    image: nocleye/api-gateway:v0.4.0-beta
     ports:
       - "8080:8080"
     environment:
@@ -300,7 +295,34 @@ Content-Type: text/plain; charset=utf-8
 API NOT FOUND
 ```
 
-## 8. Clean up
+## 8. Read the logs
+
+The gateway writes two kinds of logs. Both show up in `docker compose logs`:
+
+```sh
+docker compose logs gateway --no-log-prefix
+```
+
+The **gateway log** (standard error) tells what the gateway itself is doing. On startup you will see the same warnings `nocleye check` gave you, and that it is listening:
+
+```json
+{"level":"warn","stream":"gateway","component":"LoadGatewayConfig","error":"no client id rules defined. Callers of routes without authentication are not identified","message":"Gateway config warning", ...}
+{"level":"info","stream":"gateway","component":"RunGatewayServer","message":"Starting Gateway server on addr: 0.0.0.0:8080", ...}
+```
+
+The **access log** (standard output) has one JSON line per request, with the `stream` field set to `access`. Here are the lines for `/echo/v2/items?page=2` and `/nope`:
+
+```json
+{"stream":"access","ts":"2026-11-08T16:49:24.696Z","request_path":"/echo/v2/items","request_method":"GET","response_status":200,"error_reason":"","caller_ip":"172.18.0.1","caller_id":"","nocleye_request_id":"01a1bc10-90d8-71ab-8edf-3536f97389c3","upstream_service":"hello-app","upstream_latency_ms":0.604,"latency_ms":0.611,"path_pattern":"/echo/v2","route_matched":"echo-v2", ...}
+{"stream":"access","ts":"2026-11-08T16:49:24.701Z","request_path":"/nope","request_method":"GET","response_status":404,"error_reason":"API NOT FOUND","caller_ip":"172.18.0.1","caller_id":"","nocleye_request_id":"01a1bc10-90dd-723e-8afb-8272215ee3a8","upstream_service":"","upstream_latency_ms":0,"latency_ms":0.003,"path_pattern":"","route_matched":"", ...}
+```
+
+- `route_matched` shows which route won, `echo-v2` for the first request and empty for the second, because no route matched. `error_reason` says why the gateway itself refused it.
+- `nocleye_request_id` is the same value the backend received in the `X-Nocleye-Request-Id` header, so you can follow one request from the gateway to your backend.
+
+The lines above were shortened (`...`), you will see a few more fields. Use `| grep '"stream":"access"'` to see only the access log.
+
+## 9. Clean up
 
 ```sh
 docker compose down

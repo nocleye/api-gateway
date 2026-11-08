@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: nocleye/api-gateway:v0.1.0-beta
+    image: nocleye/api-gateway:v0.4.0-beta
     ports:
       - "8080:8080"
     environment:
