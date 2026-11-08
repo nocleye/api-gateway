@@ -1,0 +1,41 @@
+ApiVersion: v1Beta
+
+Rules:
+  # who is counted: here the caller's IP
+  ClientIDRules:
+    by-ip:
+      Modes: [IP]
+
+  UsageControlRules:
+    # 5 requests per minute for each caller
+    global-limit:
+      RequestCount: 5
+      WindowTime: 1m
+    # 10 requests per minute for each caller
+    route-limit:
+      RequestCount: 10
+      WindowTime: 1m
+
+GlobalConfig:
+  ClientIDRule: by-ip
+  UsageControlRules: [global-limit]
+
+ServerConfigs:
+  hello-app:
+    URL: "http://app:8000"
+
+ServerRoutes:
+  # Cascade (default): global-limit AND route-limit both apply, the stricter one wins -> 5 requests
+  cascade:
+    TargetServer: hello-app
+    MatchOptions:
+      PathPattern: /cascade
+    UsageControlRules: [route-limit]
+
+  # Strict: only route-limit applies, global-limit is ignored -> 10 requests
+  strict:
+    TargetServer: hello-app
+    MatchOptions:
+      PathPattern: /strict
+    UsageControlMode: Strict
+    UsageControlRules: [route-limit]
