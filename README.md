@@ -36,12 +36,12 @@ The gateway is under heavy change and we are aiming for a stable release in a fe
 Coming soon:
 
 - [x] Route by header
-- [ ] New authentication options
+- [x] New authentication options
 - [ ] Database for the rate limit system
 
 ## Get it
 
-Latest: **v0.3.0-beta** (2026-11-01)
+Latest: **v0.4.0-beta** (2026-11-08)
 
 | | |
 |---|---|
