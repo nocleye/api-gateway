@@ -1,6 +1,6 @@
 # Rate limit basics: one global limit, two routes
 
-### *Gateway Version used in this Tutorial v0.4.0-beta*
+### *Gateway Version used in this Tutorial v0.5.0-beta*
 
 This tutorial shows how the usage control (rate limit) of the api gateway works, and how the `Cascade` and `Strict` modes change which limits a route has to respect.
 
@@ -143,7 +143,7 @@ Validate the file before you run anything:
 ```sh
 docker run \
   -v "$PWD/gateway.yaml:/etc/nocleye-beta/gateway/gateway.yaml:ro" \
-  nocleye/api-gateway:v0.4.0-beta check --gConfigPath gateway.yaml
+  nocleye/api-gateway:v0.5.0-beta check --gConfigPath gateway.yaml
 ```
 
 Expected output:
@@ -188,7 +188,7 @@ WARNINGS (2)
 Only the file structure is checked; key files and backend reachability are verified when the gateway starts.
 ```
 
-The gateway refuses a limit it could never enforce. Note that `strict` is not listed in the first error, because a `Strict` route ignores the global rules. Put the line back before moving on.
+The command exits with code `1` here (with the valid config it exits with `0`), so a script or CI job can stop on it. The gateway refuses a limit it could never enforce. Note that `strict` is not listed in the first error, because a `Strict` route ignores the global rules. Put the line back before moving on.
 
 
 ## 5. Docker compose
@@ -198,7 +198,7 @@ The gateway refuses a limit it could never enforce. Note that `strict` is not li
 ```yaml
 services:
   gateway:
-    image: nocleye/api-gateway:v0.4.0-beta
+    image: nocleye/api-gateway:v0.5.0-beta
     ports:
       - "8080:8080"
     environment:
@@ -248,8 +248,8 @@ curl -si localhost:8080/cascade/ping
 
 HTTP/1.1 429 Too Many Requests
 X-Content-Type-Options: nosniff
-X-Nocleye-Request-Id: 01a1bc19-80c2-7c62-89e7-fcdf0045014c
-Date: Sun, 08 Nov 2026 16:59:10 GMT
+X-Nocleye-Request-Id: 01a1e10f-aaf4-7cb0-ac87-6021a082894d
+Date: Sun, 15 Nov 2026 21:14:22 GMT
 Content-Length: 17
 Content-Type: text/plain; charset=utf-8
 
@@ -273,15 +273,17 @@ docker compose logs gateway --no-log-prefix | grep '"stream":"access"'
 A request that passed, and one that was limited:
 
 ```json
-{"stream":"access","ts":"2026-11-08T16:59:10.295Z","request_path":"/cascade/ping","request_method":"GET","response_status":200,"error_reason":"","caller_ip":"172.18.0.1","upstream_service":"hello-app","upstream_latency_ms":1.288,"route_matched":"cascade", ...}
-{"stream":"access","ts":"2026-11-08T16:59:10.323Z","request_path":"/cascade/ping","request_method":"GET","response_status":429,"error_reason":"Too many requests","caller_ip":"172.18.0.1","upstream_service":"hello-app","upstream_latency_ms":0,"route_matched":"cascade", ...}
+{"stream":"access","ts":"2026-11-15T21:14:22.794Z","request_path":"/cascade/ping","request_method":"GET","response_status":200,"error_reason":"","caller_ip":"172.18.0.1","caller_id":"","request_id":"","nocleye_request_id":"01a1e10f-aaca-79b0-b368-f7f00994b1fc","auth_method":"","request_size_bytes":0,"response_size_bytes":472,"upstream_service":"hello-app","upstream_latency_ms":1.164,"latency_ms":1.238,"user_agent":"curl/8.18.0","path_pattern":"/cascade","header_match":"","route_matched":"cascade","gateway_version":"v0.5.0-beta"}
+{"stream":"access","ts":"2026-11-15T21:14:22.836Z","request_path":"/cascade/ping","request_method":"GET","response_status":429,"error_reason":"Too many requests","caller_ip":"172.18.0.1","caller_id":"","request_id":"","nocleye_request_id":"01a1e10f-aaf4-7cb0-ac87-6021a082894d","auth_method":"","request_size_bytes":0,"response_size_bytes":17,"upstream_service":"hello-app","upstream_latency_ms":0,"latency_ms":0.006,"user_agent":"curl/8.18.0","path_pattern":"/cascade","header_match":"","route_matched":"cascade","gateway_version":"v0.5.0-beta"}
 ```
 
 - `response_status` is `429` and `error_reason` says `Too many requests`, which tells you the gateway itself refused the request.
 - `upstream_latency_ms` is `0`: the backend was never called.
-- `caller_ip` is the one being counted by the `by-ip` rule.
+- `caller_ip` is the one being counted by the `by-ip` rule. `caller_id` is empty because only the IP identifies the caller.
+- `nocleye_request_id` of the second line is the `X-Nocleye-Request-Id` of the `429` response shown above.
+- `upstream_service` is still `hello-app` on the rejected request: it tells which server the route points to, not that the backend was called.
 
-The lines above were shortened (`...`), you will see a few more fields.
+Lines are written in batches, so they can show up a second or so after the request. The lines above are the first request that passed and the last one that was limited, out of the 8 + 1 requests of the `cascade` run.
 
 ## 9. Clean up
 

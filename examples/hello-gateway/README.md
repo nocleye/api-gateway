@@ -1,7 +1,7 @@
 # Hello gateway: one backend, two routes
 
 
-### *Gateway Version used in this Tutorial v0.4.0-beta*
+### *Gateway Version used in this Tutorial v0.5.0-beta*
 
 This is a small tutorial for showing the basics of how to use the api gateway
 
@@ -118,7 +118,7 @@ Validate the file before you run anything. `nocleye check` reads the config and 
 ```sh
 docker run \
   -v "$PWD/gateway.yaml:/etc/nocleye-beta/gateway/gateway.yaml:ro" \
-  nocleye/api-gateway:v0.4.0-beta check --gConfigPath gateway.yaml
+  nocleye/api-gateway:v0.5.0-beta check --gConfigPath gateway.yaml
 ```
 
 The config file is always read from `/etc/nocleye-beta/gateway/` inside the container, which is why the file is mounted there and `--gConfigPath` is only its name.
@@ -164,6 +164,8 @@ WARNINGS (4)
 Only the file structure is checked; key files and backend reachability are verified when the gateway starts.
 ```
 
+The report is always printed, and when the config has at least one error the command also exits with a failure (exit code `1`; with the config valid it is `0`, warnings alone don't change it). That makes `nocleye check` usable as a gate in a script or a CI job: `docker run ... check --gConfigPath gateway.yaml || echo "config rejected"`.
+
 The cli, will be your best friend while using nocleye api gateway! We are putting a lot of effort on it to prevent as much errors as possible, so we share with you in advance everytime you made a mistake or missed something.
 
 
@@ -175,7 +177,7 @@ Let's put everything together now (I hope you have changed back the routes to th
 ```yaml
 services:
   gateway:
-    image: nocleye/api-gateway:v0.4.0-beta
+    image: nocleye/api-gateway:v0.5.0-beta
     ports:
       - "8080:8080"
     environment:
@@ -204,7 +206,8 @@ Open a new terminal and send a first request:
 ```sh
 curl -s localhost:8080/echo/hello
 
-# expected to see something like this
+# expected to see something like this. The gateway added the Traceparent, X-Forwarded-* and X-Nocleye-* headers;
+# X-Nocleye-Authenticated is "false" because this route has no authentication method.
 {
   "method": "GET",
   "path": "/echo/hello",
@@ -213,12 +216,12 @@ curl -s localhost:8080/echo/hello
     "Host": "app:8000",
     "User-Agent": "curl/8.18.0",
     "Accept": "*/*",
-    "Traceparent": "00-de51182f84f254f30f2f497500223d31-0db0b7bd8aa15c31-01",
+    "Traceparent": "00-fae1f33234ec2f00d67b5563fe612458-a0ec1788519c005e-01",
     "X-Forwarded-For": "172.18.0.1",
     "X-Forwarded-Host": "localhost:8080",
     "X-Forwarded-Proto": "http",
-    "X-Nocleye-Request-Id": "01a18487-bb2b-74c1-880e-021b98176f28",
-    "Accept-Encoding": "gzip"
+    "X-Nocleye-Authenticated": "false",
+    "X-Nocleye-Request-Id": "01a1e10f-22fc-7738-b93d-25d7b7bd452e"
   },
   "body": ""
 }
@@ -240,12 +243,12 @@ curl -s "localhost:8080/echo/hello?name=world"
     "Host": "app:8000",
     "User-Agent": "curl/8.18.0",
     "Accept": "*/*",
-    "Traceparent": "00-fe58cfeb391d2334fe8d53d374794625-33c785d202ae885f-01",
+    "Traceparent": "00-d68f4ea82245fcc98336b3a408b49d87-edd51261a90f24d1-01",
     "X-Forwarded-For": "172.18.0.1",
     "X-Forwarded-Host": "localhost:8080",
     "X-Forwarded-Proto": "http",
-    "X-Nocleye-Request-Id": "01a1848b-fcc3-7397-8d88-49652b630e77",
-    "Accept-Encoding": "gzip"
+    "X-Nocleye-Authenticated": "false",
+    "X-Nocleye-Request-Id": "01a1e10f-2301-75f8-98e5-176cc57462e4"
   },
   "body": ""
 }
@@ -268,12 +271,12 @@ curl -s "localhost:8080/echo/v2/items?page=2"
     "Host": "app:8000",
     "User-Agent": "curl/8.18.0",
     "Accept": "*/*",
-    "Traceparent": "00-383f32ae8036fe9cf16e12403787a15c-7ab4864c5d261a60-01",
+    "Traceparent": "00-10e0c0ae634722986b7c935d7edbace9-92cfe43f45ba92ed-01",
     "X-Forwarded-For": "172.18.0.1",
     "X-Forwarded-Host": "localhost:8080",
     "X-Forwarded-Proto": "http",
-    "X-Nocleye-Request-Id": "01a1848b-26c4-73ea-b437-8a4212d70051",
-    "Accept-Encoding": "gzip"
+    "X-Nocleye-Authenticated": "false",
+    "X-Nocleye-Request-Id": "01a1e10f-2307-7e80-ae3e-5bafb4d0074c"
   },
   "body": ""
 }
@@ -287,8 +290,8 @@ curl -si localhost:8080/nope
 # You should see something like this.
 HTTP/1.1 404 Not Found
 X-Content-Type-Options: nosniff
-X-Nocleye-Request-Id: 01a1848e-0dea-7051-be7c-a0c9c84c7b25
-Date: Wed, 28 Oct 2026 22:07:44 GMT
+X-Nocleye-Request-Id: 01a1e10f-230d-75aa-858d-9b5ac0eb6079
+Date: Sun, 15 Nov 2026 21:13:48 GMT
 Content-Length: 13
 Content-Type: text/plain; charset=utf-8
 
@@ -306,21 +309,28 @@ docker compose logs gateway --no-log-prefix
 The **gateway log** (standard error) tells what the gateway itself is doing. On startup you will see the same warnings `nocleye check` gave you, and that it is listening:
 
 ```json
-{"level":"warn","stream":"gateway","component":"LoadGatewayConfig","error":"no client id rules defined. Callers of routes without authentication are not identified","message":"Gateway config warning", ...}
-{"level":"info","stream":"gateway","component":"RunGatewayServer","message":"Starting Gateway server on addr: 0.0.0.0:8080", ...}
+{"level":"warn","stream":"gateway","version":"v0.5.0-beta","component":"LoadGatewayConfig","time":"2026-11-15T21:13:45.015Z","caller":"run.go:73","message":"Gateway config warning: no header rules defined. It will forward all headers from users request"}
+{"level":"warn","stream":"gateway","version":"v0.5.0-beta","component":"LoadGatewayConfig","time":"2026-11-15T21:13:45.015Z","caller":"run.go:73","message":"Gateway config warning: no client id rules defined. Callers of routes without authentication are not identified"}
+{"level":"warn","stream":"gateway","version":"v0.5.0-beta","component":"LoadGatewayConfig","time":"2026-11-15T21:13:45.015Z","caller":"run.go:73","message":"Gateway config warning: UsageControlRule: empty. The gateway will have zero restrictions of usage"}
+{"level":"warn","stream":"gateway","version":"v0.5.0-beta","component":"LoadGatewayConfig","time":"2026-11-15T21:13:45.015Z","caller":"run.go:73","message":"Gateway config warning: no auth method defined. All routes will be for public access"}
+{"level":"info","stream":"gateway","version":"v0.5.0-beta","component":"RunGatewayServer","time":"2026-11-15T21:13:45.015Z","caller":"run.go:89","message":"Starting Gateway server on addr: 0.0.0.0:8080"}
+{"level":"warn","stream":"gateway","version":"v0.5.0-beta","component":"RunGatewayServer","time":"2026-11-15T21:13:45.015Z","caller":"run.go:130","message":"Gateway starting with TLS disabled"}
 ```
 
-The **access log** (standard output) has one JSON line per request, with the `stream` field set to `access`. Here are the lines for `/echo/v2/items?page=2` and `/nope`:
+The startup also logs a few more `info` lines (access log started, support server address, ...), they were left out here.
+
+The **access log** (standard output) has one JSON line per request, with the `stream` field set to `access`. Lines are written in batches, so a line can show up a second or so after the request. Here are the lines for `/echo/v2/items?page=2` and `/nope`:
 
 ```json
-{"stream":"access","ts":"2026-11-08T16:49:24.696Z","request_path":"/echo/v2/items","request_method":"GET","response_status":200,"error_reason":"","caller_ip":"172.18.0.1","caller_id":"","nocleye_request_id":"01a1bc10-90d8-71ab-8edf-3536f97389c3","upstream_service":"hello-app","upstream_latency_ms":0.604,"latency_ms":0.611,"path_pattern":"/echo/v2","route_matched":"echo-v2", ...}
-{"stream":"access","ts":"2026-11-08T16:49:24.701Z","request_path":"/nope","request_method":"GET","response_status":404,"error_reason":"API NOT FOUND","caller_ip":"172.18.0.1","caller_id":"","nocleye_request_id":"01a1bc10-90dd-723e-8afb-8272215ee3a8","upstream_service":"","upstream_latency_ms":0,"latency_ms":0.003,"path_pattern":"","route_matched":"", ...}
+{"stream":"access","ts":"2026-11-15T21:13:48.039Z","request_path":"/echo/v2/items","request_method":"GET","response_status":200,"error_reason":"","caller_ip":"172.18.0.1","caller_id":"","request_id":"","nocleye_request_id":"01a1e10f-2307-7e80-ae3e-5bafb4d0074c","auth_method":"","request_size_bytes":0,"response_size_bytes":483,"upstream_service":"hello-app","upstream_latency_ms":0.729,"latency_ms":0.748,"user_agent":"curl/8.18.0","path_pattern":"/echo/v2","header_match":"","route_matched":"echo-v2","gateway_version":"v0.5.0-beta"}
+{"stream":"access","ts":"2026-11-15T21:13:48.045Z","request_path":"/nope","request_method":"GET","response_status":404,"error_reason":"API NOT FOUND","caller_ip":"172.18.0.1","caller_id":"","request_id":"","nocleye_request_id":"01a1e10f-230d-75aa-858d-9b5ac0eb6079","auth_method":"","request_size_bytes":0,"response_size_bytes":13,"upstream_service":"","upstream_latency_ms":0,"latency_ms":0.003,"user_agent":"curl/8.18.0","path_pattern":"","header_match":"","route_matched":"","gateway_version":"v0.5.0-beta"}
 ```
 
 - `route_matched` shows which route won, `echo-v2` for the first request and empty for the second, because no route matched. `error_reason` says why the gateway itself refused it.
 - `nocleye_request_id` is the same value the backend received in the `X-Nocleye-Request-Id` header, so you can follow one request from the gateway to your backend.
+- `response_size_bytes` is the size of the body sent back to the caller. `caller_id`, `request_id` and `auth_method` are empty because there is no authentication and no client ID rule here.
 
-The lines above were shortened (`...`), you will see a few more fields. Use `| grep '"stream":"access"'` to see only the access log.
+Use `| grep '"stream":"access"'` to see only the access log.
 
 ## 9. Clean up
 
