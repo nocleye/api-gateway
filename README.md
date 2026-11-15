@@ -33,15 +33,10 @@ The gateway is under heavy change and we are aiming for a stable release in a fe
 3. Supported platforms: **Linux and macOS.** Windows is not planned for now.
 4. Docs are in English, with Brazilian Portuguese as time allows. The docs repository becomes public with the first stable release, so more languages can be added.
 
-Coming soon:
-
-- [x] Route by header
-- [x] New authentication options
-- [ ] Database for the rate limit system
 
 ## Get it
 
-Latest: **v0.4.0-beta** (2026-11-08)
+Latest: **v0.5.0-beta** (2026-11-15)
 
 | | |
 |---|---|
