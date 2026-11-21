@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # One target per gateway pod (support port 8081), discovered through the
+  # Kubernetes API, so every replica shows up with its own pod/node labels.
+  - job_name: gateway
+    metrics_path: /metrics
+    scrape_native_histograms: true
+    always_scrape_classic_histograms: true # the dashboard queries *_bucket series
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [nocleye-obs]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        regex: gateway
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        regex: support
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: node

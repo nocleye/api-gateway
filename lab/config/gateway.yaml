@@ -1,0 +1,235 @@
+# k8s observability lab config. Loaded directly via --gConfigPath (no
+# dashboard/control plane); mounted into /etc/nocleye-beta/gateway/ by the
+# gateway Deployment (ConfigMap gateway-config + Secrets gw-jwt, podinfo-tls).
+# Upstreams: svc-a = go-httpbin (plain HTTP), svc-b = podinfo (TLS).
+ApiVersion: v1Beta
+
+AuthMethods:
+  secure-hs256-bearer:
+    Mode: Bearer
+    SigningMethod: HS256
+    HeaderName: Authorization
+    KeyRef: "file:hs256.key"
+    IdClaimName: sub
+  secure-hs512-raw:
+    Mode: RawHeader
+    SigningMethod: HS512
+    HeaderName: X-Auth-Token
+    KeyRef: "file:hs512.key"
+    IdClaimName: sub
+
+Rules:
+  HeaderRules:
+    allowlist-headers:
+      Mode: Custom
+      CustomHeadersList: [X-Request-Id, X-Trace-Id]
+    strip-and-set:
+      Mode: All
+      Remove: [X-Internal]
+      Set:
+        X-Source: gw-k8s
+    preserve-host:
+      Mode: All
+      PreserveHost: true
+
+  ClientIDRules:
+    client-id-header:
+      Modes: [CustomHeader]
+      HeaderCustomValue: "X-Client-Id"
+    # fallback for everything else, so usage control always has a caller key
+    by-ip:
+      Modes: [IP]
+
+  UsageControlRules:
+    global-limit:
+      RequestCount: 1000
+      WindowTime: 1m
+    limit-a-low:
+      RequestCount: 20
+      WindowTime: 1m
+    limit-b-server:
+      RequestCount: 50
+      WindowTime: 1m
+    limit-b-route:
+      RequestCount: 10
+      WindowTime: 1m
+    # no WindowTime -> a lifetime quota instead of a rolling rate limit
+    quota-a:
+      RequestCount: 50
+
+  AccessLogRules:
+    access-on:
+      Enabled: true
+    access-off:
+      Enabled: false
+    # "log when" conditions: a request needs to match at least one of them
+    errors-only:
+      MinStatus: 400
+    slow-only:
+      MinLatencyMs: 100
+    # keeps ~1 in 5 of what is left after the other filters
+    sampled:
+      SampleRate: 0.2
+    # hard filters: both must pass, whatever the status or latency
+    reads-only:
+      Methods: [GET, HEAD]
+      ExcludePathPatterns: [/a/log/reads/health]
+
+GlobalConfig:
+  AccessLogRule: access-on
+  ClientIDRule: by-ip
+  UsageControlRules: [global-limit]
+
+ServerConfigs:
+  svc-a:
+    URL: "http://httpbin:8080"
+  svc-b:
+    URL: "https://podinfo:9899"
+    TLS:
+      CACertFile: "ca.pem"
+    UsageControlRules: [limit-b-server]
+  # nothing listens on httpbin:9999 -> connection refused -> proxyErrorHandler
+  # (source=upstream, reason=upstream_error), one of the two reasons the plan
+  # allows for this case without needing a separate unreachable container.
+  svc-down:
+    URL: "http://httpbin:9999"
+
+# Every route below (except a-rewrite, which specifically exercises path
+# rewriting) strips its own PathPattern before forwarding, so e.g.
+# /a/open/status/500 reaches the backend as /status/500, matching its
+# own mux (httpbin and podinfo: /status/{code}, /delay/{d}, /headers; httpbin: /unstable).
+ServerRoutes:
+  a-open:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/open
+    BeforeForwarding:
+      RemovePathPattern: true
+    HeaderRule: allowlist-headers
+
+  b-open:
+    TargetServer: svc-b
+    MatchOptions:
+      PathPattern: /b/open
+    BeforeForwarding:
+      RemovePathPattern: true
+    HeaderRule: strip-and-set
+
+  down:
+    TargetServer: svc-down
+    MatchOptions:
+      PathPattern: /down
+    BeforeForwarding:
+      RemovePathPattern: true
+
+  a-limited:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/limited
+    BeforeForwarding:
+      RemovePathPattern: true
+    ClientIDRule: client-id-header
+    UsageControlRules: [limit-a-low]
+
+  # svc-b already has a server-level limit (limit-b-server, 50/min); this route
+  # binds a stricter one on top (limit-b-route, 10/min) -> several rules at once.
+  b-limited:
+    TargetServer: svc-b
+    MatchOptions:
+      PathPattern: /b/limited
+    BeforeForwarding:
+      RemovePathPattern: true
+    UsageControlRules: [limit-b-route]
+
+  a-quota:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/quota
+    BeforeForwarding:
+      RemovePathPattern: true
+    ClientIDRule: client-id-header
+    UsageControlRules: [quota-a]
+
+  a-secure:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/secure
+    BeforeForwarding:
+      RemovePathPattern: true
+    AuthMethod: secure-hs256-bearer
+
+  b-secure:
+    TargetServer: svc-b
+    MatchOptions:
+      PathPattern: /b/secure
+    BeforeForwarding:
+      RemovePathPattern: true
+    AuthMethod: secure-hs512-raw
+
+  a-clients:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/clients
+    BeforeForwarding:
+      RemovePathPattern: true
+    ClientIDRule: client-id-header
+
+  a-rewrite:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/rewrite
+    BeforeForwarding:
+      RemovePathPattern: true
+      AddPathPrefix: /rewritten
+    HeaderRule: preserve-host
+
+  # counted in gw_requests_total (metrics recording doesn't depend on the
+  # access log), but absent from the stdout access log.
+  a-nolog:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/nolog
+    BeforeForwarding:
+      RemovePathPattern: true
+    AccessLogRule: access-off
+
+  # Access log filters. All four forward to svc-a, so /status/{code} and
+  # /delay/{d} work behind each of them. Compare stdout against /metrics:
+  # gw_requests_total counts every request, the log only keeps what passes.
+
+  # /a/log/errors/status/200 -> not logged, /a/log/errors/status/503 -> logged
+  a-log-errors:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/log/errors
+    BeforeForwarding:
+      RemovePathPattern: true
+    AccessLogRule: errors-only
+
+  # /a/log/slow/delay/10ms -> not logged, /a/log/slow/delay/300ms -> logged
+  a-log-slow:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/log/slow
+    BeforeForwarding:
+      RemovePathPattern: true
+    AccessLogRule: slow-only
+
+  # about 1 in 5 requests is logged
+  a-log-sampled:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/log/sampled
+    BeforeForwarding:
+      RemovePathPattern: true
+    AccessLogRule: sampled
+
+  # GET /a/log/reads/x -> logged, POST /a/log/reads/x -> not logged,
+  # GET /a/log/reads/health -> not logged (excluded path)
+  a-log-reads:
+    TargetServer: svc-a
+    MatchOptions:
+      PathPattern: /a/log/reads
+    BeforeForwarding:
+      RemovePathPattern: true
+    AccessLogRule: reads-only

@@ -1,0 +1,80 @@
+# svc-a in config/gateway.yaml: go-httpbin, plain HTTP on 8080.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: httpbin}
+  template:
+    metadata:
+      labels: {app: httpbin}
+    spec:
+      containers:
+        - name: httpbin
+          image: mccutchen/go-httpbin:2.26.0
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /status/200, port: http}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+spec:
+  selector: {app: httpbin}
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+    # nothing listens on 9999 in the pod -> connection refused -> 502 for the
+    # svc-down server (a port missing from the Service would hang instead)
+    - {name: closed, port: 9999, targetPort: 9999}
+---
+# svc-b in config/gateway.yaml: podinfo, TLS on 9899 with a cert signed by the
+# in-cluster lab CA (cert-manager, see certs.yaml), Secret podinfo-tls.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: podinfo}
+  template:
+    metadata:
+      labels: {app: podinfo}
+    spec:
+      containers:
+        - name: podinfo
+          image: stefanprodan/podinfo:6.17.0
+          command:
+            - ./podinfo
+            - --port=9898
+            - --secure-port=9899
+            - --cert-path=/data/cert
+            - --level=info
+          ports:
+            - {name: http, containerPort: 9898}
+            - {name: https, containerPort: 9899}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+          volumeMounts:
+            - {name: tls, mountPath: /data/cert, readOnly: true}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+      volumes:
+        - name: tls
+          secret:
+            secretName: podinfo-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+spec:
+  selector: {app: podinfo}
+  ports:
+    - {name: https, port: 9899, targetPort: https}

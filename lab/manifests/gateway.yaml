@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: gateway}
+  template:
+    metadata:
+      labels: {app: gateway}
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: gateway
+          image: nocleye/api-gateway:v0.6.0-rc2 # overridden by up.sh (GW_IMAGE)
+          args:
+            - gateway
+            - --gConfigPath=gateway.yaml
+            - --gHost=0.0.0.0
+            - --gPort=8080
+            - --sHost=0.0.0.0
+            - --sPort=8081
+            - --sToken=lab-token
+            - --sPrometheusEnabled=true
+            - --sPrometheusMetrics=all
+            - --gAccessLogSinks=stdout
+            - --gLogFormat=json
+            - --gTrustedProxies=0.0.0.0/0 # lab only: the Locust AuthUser spoofs X-Forwarded-For
+          ports:
+            - {name: http, containerPort: 8080}
+            - {name: support, containerPort: 8081}
+          readinessProbe:
+            httpGet: {path: /readyz, port: support}
+            periodSeconds: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: support}
+          volumeMounts:
+            - {name: gateway-files, mountPath: /etc/nocleye-beta/gateway, readOnly: true}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+      volumes:
+        # The gateway only reads files from /etc/nocleye-beta/gateway/:
+        # gateway.yaml at the root, JWT keys in auths/, CA certs in certs/.
+        - name: gateway-files
+          projected:
+            sources:
+              - configMap:
+                  name: gateway-config
+              - secret: # generated once by up.sh, shared with the Locust job
+                  name: gw-jwt
+                  items:
+                    - {key: hs256.key, path: auths/hs256.key}
+                    - {key: hs512.key, path: auths/hs512.key}
+              - secret: # cert-manager, see certs.yaml
+                  name: podinfo-tls
+                  items:
+                    - {key: ca.crt, path: certs/ca.pem}
+---
+# Exposed on the host through k3d port maps (see up.sh):
+# 8501 -> public listener, 8581 -> support (/metrics, /healthz, /readyz).
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+spec:
+  type: NodePort
+  selector: {app: gateway}
+  ports:
+    - {name: http, port: 8080, targetPort: http, nodePort: 30501}
+    - {name: support, port: 8081, targetPort: support, nodePort: 30581}

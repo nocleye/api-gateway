@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nocleye-obs
+
+resources:
+  - manifests/namespace.yaml
+  - manifests/certs.yaml
+  - manifests/upstreams.yaml
+  - manifests/gateway.yaml
+  - manifests/prometheus.yaml
+  - manifests/grafana.yaml
+
+# Name hashes make a config change roll the pods that use it on the next apply.
+configMapGenerator:
+  - name: gateway-config
+    files: [config/gateway.yaml]
+  - name: prometheus-config
+    files: [config/prometheus.yml]
+  - name: grafana-provisioning
+    files:
+      - datasource.yml=config/grafana/datasource.yml
+      - dashboards.yml=config/grafana/dashboards.yml
+  - name: grafana-dashboards
+    files: [config/grafana/dashboards/gw-k8s.json]
+  # used by the traffic Job (traffic.sh), not by any Deployment
+  - name: locustfile
+    files: [config/locustfile.py]
+    options:
+      disableNameSuffixHash: true
+
