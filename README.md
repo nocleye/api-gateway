@@ -15,14 +15,26 @@ This repository is where we share what we ship: release notes, links to artifact
 
 A self-hosted API gateway that sits in front of your backend services. One YAML file describes which service gets which request, who the caller is, how much they can call, and which headers get through.
 
-- **Servers and routes:** map public paths to backends, rewrite paths, reach HTTPS backends with your own CA.
+- **Servers and routes:** map public paths to backends, rewrite paths, reach HTTPS backends with your own CA. Proxies gRPC and WebSocket next to REST.
 - **Header rules:** choose what is forwarded, removed or added.
-- **Client identification:** identify callers by IP, token, header, cookie or query string.
-- **Usage control:** rate limits per global, server or route scope, stackable.
-- **Authentication:** validate signed JWT tokens before a request reaches your backend.
-- **Observability:** JSON access log, Prometheus metrics, health probes.
+- **Client identification:** identify callers by IP, bearer token, API key query parameter, custom header or custom query string.
+- **Usage control:** rate limits per global, server or route scope, stackable, with burst control and an optional Redis-compatible shared store.
+- **Authentication:** validate signed JWTs, OAuth2 tokens (JWKS or introspection) and encrypted JWE tokens, and require scopes, before a request reaches your backend.
+- **Config check:** `nocleye check` validates your config and lists every error and warning before anything runs.
+- **Observability:** JSON access log, Prometheus metrics, health probes, and a support server with a live config API.
 
 Everything is defined once and bound by name, so the same rule can be reused anywhere in the config. Full details are in the [documentation](https://nocleye.com/docs/).
+
+### Quick start
+
+```bash
+docker pull nocleye/api-gateway:v0.6.0-beta
+# write gateway.yaml, then:
+docker run --rm -v "$PWD/gateway.yaml:/etc/nocleye-beta/gateway/gateway.yaml:ro" \
+  -e GATEWAY_CONFIG_PATH=gateway.yaml nocleye/api-gateway:v0.6.0-beta check
+```
+
+The [Getting started guide](https://nocleye.com/docs/getting-started/) has a minimal config and the run command.
 
 ## Beta
 
