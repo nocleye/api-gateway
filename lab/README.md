@@ -1,9 +1,3 @@
-# Under construction while validating RC
-## This setup was made by Claude in a single prompt and I didn't review in detail, if you found some crap bug, you can fix it locally or wait for me to finish :)
-
-![Grafana](./screenshot.png  "a title")
-
-
 # k8s lab
 
 A local k3d cluster running a published gateway image in front of two apps. Prometheus
@@ -12,14 +6,19 @@ directly; there's no dashboard/control plane.
 
 | app | role | notes |
 |---|---|---|
-| `gateway` | 2 replicas | public `8080`, support `8081` (`/metrics`, `/healthz`, `/readyz`, token `lab-token`) |
+| `gateway` | 1 replica, `core` metrics | public `8080`, support `8081` (`/metrics`, `/healthz`, `/readyz`, token `lab-token`) |
 | `httpbin` ([go-httpbin](https://github.com/mccutchen/go-httpbin)) | `svc-a`, plain HTTP | `/status/{code}`, `/delay/{300ms}`, `/unstable`, `/headers`, `/get` |
 | `podinfo` ([podinfo](https://github.com/stefanprodan/podinfo)) | `svc-b`, TLS | cert issued by an in-cluster CA, verified by the gateway |
 | [cert-manager](https://cert-manager.io) | TLS | self-signed root -> `lab-ca` issuer -> `podinfo-tls` secret (`manifests/certs.yaml`) |
-| `prometheus` | scrapes every gateway pod | pod discovery, `pod`/`node` labels |
-| `grafana` | anonymous admin | "Gateway k8s Observability Lab" dashboard |
+| `prometheus` | scrapes the gateway pod | pod discovery, `pod`/`node` labels |
+| `grafana` | anonymous admin | "Gateway k8s Observability Lab" dashboard, core metrics only (no stream, JWKS or dependency panels: the lab has no traffic for them) |
+
+## Grafana dashboard sample
+![Grafana](./screenshot.png  "a title")
 
 ## Run
+
+### **It Requires [k3d installed!](https://k3d.io/v5.9.0/)** 
 
 ```sh
 up.sh                                   # create cluster + deploy (re-run to re-apply)
@@ -42,13 +41,12 @@ summary when done. JWTs for the auth routes are signed with PyJWT using the
 same keys as the gateway.
 
 ```sh
-traffic.sh                                  # 20 users, 60s, all but CardinalityUser
+traffic.sh                                  # 20 users, 60s, all classes
 traffic.sh -t 2m AuthUser RateLimitUser
 traffic.sh -u 300 -r 100 -t 30s SteadyUser  # spike
-traffic.sh CardinalityUser
 ```
 
-Classes: `SteadyUser`, `ErrorsUser`, `RateLimitUser`, `AuthUser`, `ScannerUser`, `CardinalityUser`.
+Classes: `SteadyUser`, `ErrorsUser`, `RateLimitUser`, `AuthUser`, `ScannerUser`.
 
 ## Layout
 

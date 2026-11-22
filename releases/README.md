@@ -4,6 +4,7 @@ Release notes and links to the artifacts (binaries, Docker image, SBOMs and sign
 
 | Version | Date | Notes and artifacts |
 |---|---|---|
+| v0.6.0-beta | 2026-11-22 | [v0.6.0-beta.md](v0.6.0-beta.md) |
 | v0.5.0-beta | 2026-11-15 | [v0.5.0-beta.md](v0.5.0-beta.md) |
 | v0.4.0-beta | 2026-11-08 | [v0.4.0-beta.md](v0.4.0-beta.md) |
 | v0.3.0-beta | 2026-11-01 | [v0.3.0-beta.md](v0.3.0-beta.md) |

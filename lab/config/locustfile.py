@@ -83,7 +83,8 @@ class RateLimitUser(FastHttpUser):
     noisy = clients[:3]
 
     def client_id(self) -> str:
-        return random.choice(self.noisy * 3 + self.clients)  # noisy ones get more weight
+        # the 3 noisy clients get ~half the traffic, enough to hit limit-a-low and quota-a
+        return random.choice(self.noisy * 10 + self.clients)
 
     def call(self, path: str, **headers):
         with self.client.get(path, headers=headers, catch_response=True) as r:
@@ -114,7 +115,11 @@ class AuthUser(FastHttpUser):
     @task(4)
     def valid(self):
         self.client.get("/a/secure/get", headers={"Authorization": f"Bearer {self.hs256}"})
-        self.client.get("/b/secure/version", headers={"X-Auth-Token": self.hs512})
+        # svc-b has a server-wide limit (50/min), so 429 is expected
+        with self.client.get("/b/secure/version", headers={"X-Auth-Token": self.hs512},
+                             catch_response=True) as r:
+            if r.status_code == 429:
+                r.success()
 
     @task(3)
     def missing(self):
@@ -141,13 +146,3 @@ class ScannerUser(FastHttpUser):
         with self.client.get(path, name="scanner", catch_response=True) as r:
             r.success()
 
-
-class CardinalityUser(FastHttpUser):
-    """Random paths and client ids, to stress the unique-path/caller metrics."""
-    wait_time = between(0.05, 0.2)
-
-    @task
-    def random_path(self):
-        with self.client.get("/" + rand(12), name="random", headers={"X-Client-Id": rand(12)},
-                             catch_response=True) as r:
-            r.success()

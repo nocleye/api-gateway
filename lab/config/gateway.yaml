@@ -88,9 +88,8 @@ ServerConfigs:
     TLS:
       CACertFile: "ca.pem"
     UsageControlRules: [limit-b-server]
-  # nothing listens on httpbin:9999 -> connection refused -> proxyErrorHandler
-  # (source=upstream, reason=upstream_error), one of the two reasons the plan
-  # allows for this case without needing a separate unreachable container.
+  # nothing listens on httpbin:9999 -> connection refused -> 502
+  # (source=upstream, reason=upstream_error in gw_requests_total).
   svc-down:
     URL: "http://httpbin:9999"
 

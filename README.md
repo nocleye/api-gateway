@@ -36,7 +36,7 @@ The gateway is under heavy change and we are aiming for a stable release in a fe
 
 ## Get it
 
-Latest: **v0.5.0-beta** (2026-11-15)
+Latest: **v0.6.0-beta** (2026-11-22)
 
 | | |
 |---|---|
@@ -47,6 +47,7 @@ Latest: **v0.5.0-beta** (2026-11-15)
 
 - [`releases/`](releases/): release notes and links to artifacts.
 - [`examples/`](examples/): usage examples.
+- [`lab/`](lab/): a local Kubernetes (k3d) lab: the gateway in front of two sample apps, with Prometheus, a Grafana dashboard and Locust traffic scenarios.
 - Utilities for working with the binaries and images will be added here as they are ready.
 
 ## Contact

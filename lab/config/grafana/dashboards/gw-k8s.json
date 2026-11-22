@@ -2,7 +2,7 @@
   "title": "Gateway k8s Observability Lab",
   "uid": "gw-k8s-lab",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "refresh": "5s",
   "time": {
@@ -26,12 +26,12 @@
   },
   "panels": [
     {
-      "id": 9,
+      "id": 1,
       "title": "Build info",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 0
       },
@@ -42,12 +42,72 @@
       "targets": [
         {
           "expr": "gw_build_info",
-          "legendFormat": "{{version}} / {{go_version}}"
+          "legendFormat": "{{version}} / {{go_version}}",
+          "refId": "A"
         }
-      ]
+      ],
+      "options": {
+        "textMode": "name",
+        "colorMode": "none",
+        "graphMode": "none"
+      }
     },
     {
-      "id": 1,
+      "id": 2,
+      "title": "Routes loaded",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "expr": "gw_routes",
+          "legendFormat": "routes",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "colorMode": "none",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Config hash",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "expr": "gw_config_info",
+          "legendFormat": "{{hash}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "name",
+        "colorMode": "none",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 4,
       "title": "Request rate by route/code",
       "type": "timeseries",
       "gridPos": {
@@ -63,12 +123,13 @@
       "targets": [
         {
           "expr": "sum by (route, code) (rate(gw_requests_total[1m]))",
-          "legendFormat": "{{route}} {{code}}"
+          "legendFormat": "{{route}} {{code}}",
+          "refId": "A"
         }
       ]
     },
     {
-      "id": 3,
+      "id": 5,
       "title": "Latency p50/p95/p99 per route",
       "type": "timeseries",
       "gridPos": {
@@ -84,20 +145,23 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.5, sum by (le, route) (rate(gw_request_duration_seconds_bucket[1m])))",
-          "legendFormat": "p50 {{route}}"
+          "legendFormat": "p50 {{route}}",
+          "refId": "A"
         },
         {
           "expr": "histogram_quantile(0.95, sum by (le, route) (rate(gw_request_duration_seconds_bucket[1m])))",
-          "legendFormat": "p95 {{route}}"
+          "legendFormat": "p95 {{route}}",
+          "refId": "B"
         },
         {
           "expr": "histogram_quantile(0.99, sum by (le, route) (rate(gw_request_duration_seconds_bucket[1m])))",
-          "legendFormat": "p99 {{route}}"
+          "legendFormat": "p99 {{route}}",
+          "refId": "C"
         }
       ]
     },
     {
-      "id": 2,
+      "id": 6,
       "title": "Error ratio by source",
       "type": "timeseries",
       "gridPos": {
@@ -112,14 +176,15 @@
       },
       "targets": [
         {
-          "expr": "sum by (source) (rate(gw_requests_total{reason!=\"none\"}[1m])) / sum (rate(gw_requests_total[1m]))",
-          "legendFormat": "{{source}}"
+          "expr": "sum by (source) (rate(gw_requests_total{reason!=\"none\"}[1m])) / scalar(sum(rate(gw_requests_total[1m])))",
+          "legendFormat": "{{source}}",
+          "refId": "A"
         }
       ]
     },
     {
-      "id": 10,
-      "title": "Request rate by pod",
+      "id": 7,
+      "title": "Gateway rejections by reason",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -133,15 +198,15 @@
       },
       "targets": [
         {
-          "expr": "sum by (pod) (rate(gw_requests_total[1m]))",
-          "legendFormat": "{{pod}}",
+          "expr": "sum by (reason) (rate(gw_requests_total{source=\"gateway\"}[1m]))",
+          "legendFormat": "{{reason}}",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 11,
-      "title": "In-flight by pod",
+      "id": 8,
+      "title": "Limit rejections by rule",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -155,15 +220,15 @@
       },
       "targets": [
         {
-          "expr": "sum by (pod) (gw_in_flight_requests)",
-          "legendFormat": "{{pod}}",
+          "expr": "sum by (rule, scope, kind) (rate(gw_limit_rejections_total[1m]))",
+          "legendFormat": "{{rule}} ({{scope}}, {{kind}})",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 4,
-      "title": "In-flight requests per upstream",
+      "id": 9,
+      "title": "Upstream latency p95 per route",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -177,18 +242,19 @@
       },
       "targets": [
         {
-          "expr": "gw_in_flight_requests",
-          "legendFormat": "{{upstream}}"
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(gw_upstream_duration_seconds_bucket[1m])))",
+          "legendFormat": "p95 {{route}}",
+          "refId": "A"
         }
       ]
     },
     {
-      "id": 7,
-      "title": "Unmatched traffic",
+      "id": 10,
+      "title": "In-flight requests per upstream",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 20
       },
@@ -198,23 +264,20 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(gw_requests_total{route=\"__unmatched__\"}[1m]))",
-          "legendFormat": "unmatched req/s"
-        },
-        {
-          "expr": "gw_unmatched_unique_paths",
-          "legendFormat": "distinct unmatched paths"
+          "expr": "sum by (upstream) (gw_in_flight_requests)",
+          "legendFormat": "{{upstream}}",
+          "refId": "A"
         }
       ]
     },
     {
-      "id": 8,
-      "title": "Sink drops and queue depth",
+      "id": 11,
+      "title": "Body bytes per route",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 20
       },
       "datasource": {
@@ -223,12 +286,74 @@
       },
       "targets": [
         {
+          "expr": "sum by (route) (rate(gw_request_bytes_total[1m]))",
+          "legendFormat": "in {{route}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (route) (rate(gw_response_bytes_total[1m]))",
+          "legendFormat": "out {{route}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 12,
+      "title": "Unmatched traffic",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gw_requests_total{route=\"__unmatched__\"}[1m]))",
+          "legendFormat": "unmatched req/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Access log drops and queue depth",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
           "expr": "sum by (sink, reason) (rate(gw_sink_dropped_total[1m]))",
-          "legendFormat": "{{sink}} dropped ({{reason}})"
+          "legendFormat": "{{sink}} dropped ({{reason}})",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (reason) (rate(gw_access_log_dropped_total[1m]))",
+          "legendFormat": "dropped before sinks ({{reason}})",
+          "refId": "B"
         },
         {
           "expr": "gw_sink_queue_depth",
-          "legendFormat": "{{sink}} queue depth"
+          "legendFormat": "{{sink}} queue depth",
+          "refId": "C"
         }
       ]
     }

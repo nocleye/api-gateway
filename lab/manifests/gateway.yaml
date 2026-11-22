@@ -17,7 +17,7 @@ spec:
         runAsGroup: 65532
       containers:
         - name: gateway
-          image: nocleye/api-gateway:v0.6.0-rc2 # overridden by up.sh (GW_IMAGE)
+          image: nocleye/api-gateway:latest # overridden by up.sh (GW_IMAGE)
           args:
             - gateway
             - --gConfigPath=gateway.yaml
@@ -27,7 +27,7 @@ spec:
             - --sPort=8081
             - --sToken=lab-token
             - --sPrometheusEnabled=true
-            - --sPrometheusMetrics=all
+            - --sPrometheusMetrics=core
             - --gAccessLogSinks=stdout
             - --gLogFormat=json
             - --gTrustedProxies=0.0.0.0/0 # lab only: the Locust AuthUser spoofs X-Forwarded-For

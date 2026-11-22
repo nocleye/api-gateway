@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Creates the k3d cluster (if missing) and deploys the k8s observability lab:
-# cert-manager, gateway (2 replicas) -> httpbin + podinfo(TLS), scraped by
+# cert-manager, gateway (1 replica) -> httpbin + podinfo(TLS), scraped by
 # Prometheus, visualized in Grafana. Safe to re-run: it just re-applies.
 #
-#   GW_IMAGE=nocleye/api-gateway:v0.6.0-rc2 ./up.sh
+#   GW_IMAGE=nocleye/api-gateway:latest ./up.sh
 set -euo pipefail
 
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLUSTER="${CLUSTER:-nocleye-obs}"
 NS=nocleye-obs
-GW_IMAGE="${GW_IMAGE:-nocleye/api-gateway:v0.6.0-rc2}"
+GW_IMAGE="${GW_IMAGE:-nocleye/api-gateway:v0.6.0-beta}"
 CERT_MANAGER_VERSION="${CERT_MANAGER_VERSION:-v1.21.3}"
 
 for bin in docker k3d kubectl openssl; do

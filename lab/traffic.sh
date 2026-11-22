@@ -5,11 +5,11 @@
 #   ./traffic.sh [-u users] [-r spawn-rate] [-t duration] [UserClass ...]
 #
 # User classes: SteadyUser ErrorsUser RateLimitUser AuthUser ScannerUser
-#               CardinalityUser (default: all but CardinalityUser)
+#               (default: all)
 # Examples:
 #   ./traffic.sh -t 2m
 #   ./traffic.sh -u 300 -r 100 -t 30s SteadyUser     # spike
-#   ./traffic.sh CardinalityUser
+#   ./traffic.sh AuthUser RateLimitUser
 set -euo pipefail
 
 CLUSTER="${CLUSTER:-nocleye-obs}"
@@ -18,7 +18,7 @@ LOCUST_IMAGE="${LOCUST_IMAGE:-locustio/locust:2.47.0}"
 PYJWT_VERSION="${PYJWT_VERSION:-2.15.1}"
 USERS=20 RATE=5 DURATION=60s
 
-usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 while getopts "u:r:t:h" opt; do
   case "$opt" in
     u) USERS="$OPTARG" ;;
