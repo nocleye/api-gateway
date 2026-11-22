@@ -14,7 +14,7 @@ directly; there's no dashboard/control plane.
 | `grafana` | anonymous admin | "Gateway k8s Observability Lab" dashboard, core metrics only (no stream, JWKS or dependency panels: the lab has no traffic for them) |
 
 ## Grafana dashboard sample
-![Grafana](./screenshot.png  "a title")
+![Grafana](./screenshot_v0.6.0.png  "a title")
 
 ## Run
 
