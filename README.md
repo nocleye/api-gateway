@@ -72,7 +72,15 @@ Use GitHub issues for anything public:
 
 **Security issues:** please do not open a public issue. Email **[contact@nocleye.com](mailto:contact@nocleye.com)** instead (see [SECURITY.md](.github/SECURITY.md)).
 
+Want to fix or add an example, or improve the lab? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 For anything else, or just to say hi, write to [contact@nocleye.com](mailto:contact@nocleye.com).
+
+## License
+
+Everything in this repository is under the [MIT license](LICENSE).
+
+The gateway itself is not in this repository: its binaries and Docker image come with their own license. The Nocleye name and logo (`assets/logo.png`) are not covered by the MIT license.
 
 
 Made by [Nocleye](https://nocleye.com)
