@@ -1,0 +1,88 @@
+name: Bug report
+description: Something in the gateway does not work as expected.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+        **Security issues:** please do not open a public issue. Email contact@nocleye.com instead.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues and this has not been reported yet.
+          required: true
+        - label: I removed secrets (tokens, keys, passwords, internal hostnames) from the config and logs below.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Gateway version
+      description: Output of `nocleye --version` or the Docker image tag.
+      placeholder: v0.6.0-beta
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How do you run the gateway?
+      options:
+        - Docker image
+        - Binary (Linux)
+        - Binary (macOS)
+        - Kubernetes
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start the gateway with the config below
+        2. Send `curl -i http://localhost:8080/...`
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant gateway.yaml
+      description: The smallest config that reproduces the problem. It is formatted as YAML automatically.
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "`nocleye check` output and logs"
+      description: Paste the relevant output. It is formatted as code automatically.
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Environment details, screenshots, links, related issues.

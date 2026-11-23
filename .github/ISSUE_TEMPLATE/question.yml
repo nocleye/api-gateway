@@ -1,0 +1,28 @@
+name: Question
+description: Ask how to do something with the gateway.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, please check the [documentation](https://nocleye.com/docs) — the answer may already be there.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Gateway version
+      placeholder: v0.6.0-beta
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Relevant config, commands or docs pages. Remove any secrets first.

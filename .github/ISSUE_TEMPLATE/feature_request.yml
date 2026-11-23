@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest a new feature or an improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion.
+        During the beta we deliver in this order: **Security -> Ergonomics -> New Features -> Performance**.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what makes it hard today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work? A config example helps a lot.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Servers and routes
+        - Header rules
+        - Client identification
+        - Usage control (rate limits)
+        - Authentication
+        - Config check
+        - Observability
+        - Docs
+        - Other
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds or other approaches you have tried.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context

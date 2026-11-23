@@ -62,14 +62,17 @@ Latest: **v0.6.0-beta** (2026-11-22)
 - [`lab/`](lab/): a local Kubernetes (k3d) lab: the gateway in front of two sample apps, with Prometheus, a Grafana dashboard and Locust traffic scenarios.
 - Utilities for working with the binaries and images will be added here as they are ready.
 
-## Contact
+## Feedback and support
 
-Write to **[contact@nocleye.com](mailto:contact@nocleye.com)** to:
+Use GitHub issues for anything public:
 
-- ask for a feature,
-- report a bug,
-- report a security issue (please use email, not a public issue),
-- or just say hi.
+- [Report a bug](https://github.com/nocleye/api-gateway/issues/new?template=bug_report.yml)
+- [Request a feature](https://github.com/nocleye/api-gateway/issues/new?template=feature_request.yml)
+- [Ask a question](https://github.com/nocleye/api-gateway/issues/new?template=question.yml)
+
+**Security issues:** please do not open a public issue. Email **[contact@nocleye.com](mailto:contact@nocleye.com)** instead (see [SECURITY.md](.github/SECURITY.md)).
+
+For anything else, or just to say hi, write to [contact@nocleye.com](mailto:contact@nocleye.com).
 
 
 Made by [Nocleye](https://nocleye.com)
