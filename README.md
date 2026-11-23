@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="assets/nocleye-hero-github-dark.png" alt="Nocleye logo">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/nocleye-hero-github-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/nocleye-hero-github-light.png">
+    <img src="assets/nocleye-hero-github-light.png" alt="Nocleye: the control point for your API traffic">
+  </picture>
 </p>
 
 
