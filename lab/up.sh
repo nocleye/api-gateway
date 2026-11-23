@@ -3,7 +3,7 @@
 # cert-manager, gateway (1 replica) -> httpbin + podinfo(TLS), scraped by
 # Prometheus, visualized in Grafana. Safe to re-run: it just re-applies.
 #
-#   GW_IMAGE=nocleye/api-gateway:latest ./up.sh
+#   GW_IMAGE=nocleye/api-gateway:<tag> ./up.sh
 set -euo pipefail
 
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,7 +52,7 @@ echo "gateway image: $GW_IMAGE"
 # Deployment is Available, so retry the apply a few times.
 for i in 1 2 3 4 5 6; do
   if "${KC[@]}" kustomize "$LAB_DIR" \
-      | sed "s|image: nocleye/api-gateway:v0.6.0-rc2.*|image: $GW_IMAGE|" \
+      | sed "s|image: nocleye/api-gateway:.*|image: $GW_IMAGE|" \
       | "${KC[@]}" apply -f -; then
     break
   fi

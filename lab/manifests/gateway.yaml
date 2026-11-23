@@ -17,7 +17,7 @@ spec:
         runAsGroup: 65532
       containers:
         - name: gateway
-          image: nocleye/api-gateway:latest # overridden by up.sh (GW_IMAGE)
+          image: nocleye/api-gateway:v0.6.0-beta # overridden by up.sh (GW_IMAGE)
           args:
             - gateway
             - --gConfigPath=gateway.yaml
