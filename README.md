@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Nocleye logo" width="160">
+  <img src="assets/nocleye-hero-github-dark.png" alt="Nocleye logo">
 </p>
 
-# Nocleye
 
 - Site: [Nocleye](https://nocleye.com) 
 - Docs: [Docs](https://nocleye.com/docs)
