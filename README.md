@@ -3,8 +3,12 @@
 </p>
 
 
-- Site: [Nocleye](https://nocleye.com) 
-- Docs: [Docs](https://nocleye.com/docs)
+<p align="center">
+  <a href="https://nocleye.com">Website</a> ·
+  <a href="https://nocleye.com/docs">Docs</a> ·
+  <a href="https://nocleye.com/docs/releases/">Releases</a> ·
+  <a href="https://hub.docker.com/r/nocleye/api-gateway">Docker Hub</a>
+</p>
 
 ---
 
